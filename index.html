@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Touchline — Youth Soccer Practice Planner</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+  <div class="nav-inner">
+    <a class="brand" href="./" aria-label="Touchline home"><span class="brand-mark" aria-hidden="true">t.</span>touchline<span class="brand-dot">/</span></a>
+    <span class="nav-label">The youth coach's playbook</span>
+    <a class="nav-link" href="#plan">Practice builder <span aria-hidden="true">↗</span></a>
+  </div>
+</header>
+
+<section class="hero" aria-labelledby="pageTitle">
+  <div>
+    <p class="eyebrow"><span class="live-dot"></span> SMALL GAMES. BIG DEVELOPMENT.</p>
+    <h1 id="pageTitle">Less standing.<br>More <em>playing.</em></h1>
+    <p class="hero-copy">Good practices start with a simple plan. Pick your activities,<br class="desktop-break"> build their skills, and keep the ball moving.</p>
+  </div>
+  <div class="hero-note"><span class="note-symbol" aria-hidden="true">↗</span><strong>Built for the grassroots.</strong><p>U8 &amp; U10 · 60–90 minutes<br>Fundamentals first. A ball at their feet.</p></div>
+</section>
+
+<div class="layout">
+  <main id="libraryPane">
+    <div class="section-heading"><div><p class="eyebrow">FIND YOUR NEXT ACTIVITY</p><h2>Training library <span class="count" id="libraryCount"></span></h2></div></div>
+    <div class="library-tools">
+      <label class="search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Search activities or skills…" aria-label="Search activities or skills"></label>
+      <label class="phase-select"><span class="sr-only">Session phase</span><select id="phase"><option value="">All phases</option></select></label>
+    </div>
+    <p class="filter-label">FOCUS ON <span>Choose skills to narrow your library</span></p>
+    <div class="filters" id="filters" role="group" aria-label="Filter by skill"></div>
+    <p class="result-note" id="resultNote" role="status"></p>
+    <div class="grid" id="library"></div>
+    <p class="library-footer">More touches. Fewer lines. Let them play.</p>
+  </main>
+
+  <aside id="plan" aria-label="Your practice plan">
+    <div class="plan-heading"><div><p class="eyebrow">THE SESSION</p><h2>Your practice</h2></div><span class="plan-count" id="planCount">0 activities</span></div>
+    <div class="time-summary">
+    <div class="total" aria-live="polite" aria-atomic="true"><b id="totalMin">0</b><span>min</span></div>
+    <div class="time-target">ACTIVE TRAINING TIME<br><strong>Target: 60–90 min</strong></div>
+    </div>
+    <div class="status" id="status"></div>
+    <div class="gauge" aria-hidden="true"><div class="zone" id="zone"></div><div class="fill" id="fill"></div></div>
+    <div class="gauge-labels" id="gaugeLabels" aria-hidden="true"></div>
+    <div class="timeline" id="timeline" aria-label="Practice timeline"></div>
+    <p class="core" id="core"></p>
+
+    <details class="focus-details">
+    <summary>Skill breakdown <span>View coverage</span></summary>
+    <p class="help-text">Estimated emphasis: primary skills count full time; secondary skills count half. Skills overlap.</p>
+    <div id="skills"></div>
+    </details>
+
+    <h3 class="sub">Session lineup <span>Make it yours</span></h3>
+    <ol class="items" id="items"></ol>
+    <div class="touches" id="touches"></div>
+    <p class="help-text">Timing shows activity minutes. Allow extra time for water, setup, and transitions.</p>
+    <div class="actions">
+      <button class="btn primary-btn" id="sample" type="button">Try a sample plan</button>
+      <button class="btn" id="share" type="button">Copy link</button>
+      <button class="btn" id="print" type="button">Print</button>
+      <button class="btn text-btn" id="clear" type="button">Clear plan</button>
+      <span class="toast" id="toast" role="status"></span>
+    </div>
+    <div id="printSheet"></div>
+  </aside>
+</div>
+<a class="mobile-bar" href="#plan" id="mobileBar"></a>
+
+<script>
+const TARGET = { min: 60, max: 90 };
+
+// Skill colors are used everywhere (tags, timeline, focus bars).
+const SKILLS = {
+  dribble: { label: "Dribbling",      color: "#2b6fd6" },
+  touch:   { label: "First touch",    color: "#13a08f" },
+  pass:    { label: "Passing",        color: "#8a5bd6" },
+  shoot:   { label: "Shooting",       color: "#d63b3b" },
+  attack:  { label: "1v1 attacking",  color: "#e8780f" },
+  defend:  { label: "Defending",      color: "#566b80" },
+  sense:   { label: "Game sense",     color: "#b59300" },
+  agility: { label: "Agility & fun",  color: "#d64b93" },
+};
+const NO_SKILL = "#9aa5af";
+const PHASES = ["Warm-up", "Technical", "Game-based", "Scrimmage", "Cool-down"];
+
+// skills[0] is the primary skill (full credit); the rest get half credit.
+// t = rough touches per player per minute. Diagram coordinates use a 200x130 viewBox.
+const LIB = {
+  freeDribble: { title: "Ball Mastery Free Play", phase: 0, min: 8, t: 30, skills: ["dribble", "touch", "agility"], players: "Everyone, 1 ball each", space: "20x20 yds",
+    setup: "Mark a square. Every player dribbles freely with their own ball.",
+    steps: ["Call out moves: sole taps, inside-outside, pull-backs, turns", "Switch speed on 'fast' and 'slow'", "Challenge: 'How many body parts can you use?'"],
+    points: ["Head up between touches", "Keep the ball close"],
+    d: { label: "20x20", players: [[50,40,1],[90,30,1],[140,45,1],[70,85,1],[120,95,1],[160,80,1]], arrows: [[50,40,75,55],[140,45,115,30],[120,95,95,75],[160,80,170,55]] } },
+  dribbleTag: { title: "Dribble Tag", phase: 0, min: 8, t: 28, skills: ["agility", "dribble"], players: "Everyone, 1 ball each", space: "20x20 yds",
+    setup: "2 taggers (bibs) dribble and tag others by tapping them while keeping control of their ball.",
+    steps: ["Tagged players do 5 toe taps, then rejoin", "Swap taggers every 60 seconds", "Progression: ball out of the square = frozen for 3 seconds"],
+    points: ["Change direction and speed to escape", "Protect the ball with your body"],
+    d: { label: "20x20", players: [[40,45,1],[100,35,1],[150,60,1],[80,95,1],[130,100,1],[60,70,2],[120,70,2]], arrows: [[60,70,85,60],[120,70,140,62],[100,35,80,25]] } },
+  redGreen: { title: "Red Light, Green Light", phase: 0, min: 6, t: 26, skills: ["touch", "dribble", "agility"], players: "Everyone, 1 ball each", space: "20x20 yds",
+    setup: "Coach stands at one side. Players dribble when told.",
+    steps: ["Green = dribble, Yellow = slow, Red = sole on the ball", "Add 'Purple' = turn, 'Banana' = spin the ball", "Add stop-and-go with different surfaces"],
+    points: ["Stop the ball quickly with the sole", "Listen with your head up"],
+    d: { label: "20x20", players: [[40,90,1],[75,95,1],[110,92,1],[145,96,1],[60,75,1],[130,78,1],[100,20,3]], arrows: [[40,90,40,65],[110,92,115,68],[145,96,150,70]] } },
+  gates: { title: "Gates Dribbling", phase: 1, min: 10, t: 26, skills: ["dribble", "sense"], players: "Everyone, 1 ball each", space: "25x25 yds",
+    setup: "Scatter 8-12 gates (two cones, 2 yds apart) around the square.",
+    steps: ["Dribble through as many gates as you can in 60 seconds; count them", "Never use the same gate twice in a row", "Progression: weaker foot only, or pass through the gate"],
+    points: ["Scan for open gates before you arrive", "Accelerate out of each gate"],
+    d: { label: "25x25", gates: [[40,35],[90,30],[145,40],[60,75],[115,70],[160,85],[85,105]], players: [[25,55,1],[100,50,1],[140,100,1]], arrows: [[25,55,40,40],[100,50,115,66],[140,100,100,106]] } },
+  sharks: { title: "Sharks & Minnows", phase: 1, min: 10, t: 22, skills: ["dribble", "attack", "agility"], players: "Everyone, 1 ball each", space: "25x20 yds",
+    setup: "Minnows dribble from one end line to the other. 1-2 sharks without balls try to kick balls out.",
+    steps: ["Minnow loses the ball = becomes a shark", "Last minnow wins", "Variation: sharks have a ball too"],
+    points: ["Use your body to shield", "Beat the shark with a move, then speed away"],
+    d: { label: "25x20", players: [[25,35,1],[25,60,1],[25,85,1],[170,50,1],[100,55,2],[100,85,2]], arrows: [[25,35,70,35],[25,60,70,62],[25,85,70,85]] } },
+  tossControl: { title: "Toss & Control", phase: 1, min: 8, t: 16, skills: ["touch", "agility"], players: "Pairs, 1 ball per pair", space: "20x20 yds",
+    setup: "Partner tosses the ball underhand. The receiver controls it with foot, thigh or chest, then dribbles away.",
+    steps: ["Toss, control with one touch, dribble 5 yards, return", "Swap after 5 tosses", "Progression: toss higher, or call the body part to use"],
+    points: ["Cushion the ball: relax the surface on contact", "Get in line with the ball early"],
+    d: { label: "Pairs", players: [[40,50,1],[78,50,2],[130,85,1],[168,85,2]], arrows: [[74,50,48,50,1],[164,85,138,85,1]] } },
+  passPairs: { title: "Pass Through Gates", phase: 1, min: 10, t: 18, skills: ["pass", "touch", "sense"], players: "Pairs, 1 ball per pair", space: "25x25 yds",
+    setup: "Gates scattered around. Partners dribble and pass through gates to each other.",
+    steps: ["Pass through a gate, partner receives and dribbles to the next gate", "Count gates passed in 90 seconds", "Progression: first-time passes, weaker foot only"],
+    points: ["Pass with the inside of the foot, firm", "Receive across the body, ready for the next touch"],
+    d: { label: "25x25", gates: [[50,40],[110,35],[155,70],[80,90]], players: [[35,55,1],[65,55,1],[130,50,2],[130,85,2]], arrows: [[35,55,65,50,1],[130,50,130,85,1]] } },
+  triangles: { title: "Passing Triangles", phase: 1, min: 10, t: 20, skills: ["pass", "touch"], players: "Groups of 3, 1 ball each group", space: "10x10 yds per group",
+    setup: "Three players on the corners of a triangle. Pass and follow your pass to the next corner.",
+    steps: ["Receive, control, pass, then move to the next cone", "Switch direction after 2 minutes", "Progression: two-touch, then one-touch"],
+    points: ["Open your body to see the next target", "Pass to the foot away from pressure"],
+    d: { label: "10x10", cones: [[60,90],[140,90],[100,40]], players: [[60,90,1],[140,90,1],[100,40,1]], arrows: [[66,86,96,46,1],[104,46,134,86,1],[134,90,66,90,1]] } },
+  shadow: { title: "Shadow Defending", phase: 1, min: 8, t: 14, skills: ["defend", "agility"], players: "Pairs, 1 ball per pair", space: "20x20 yds",
+    setup: "Leader dribbles; partner follows one yard away, staying low and side-on without trying to tackle.",
+    steps: ["30 seconds, then swap roles", "Leader changes speed and direction", "Progression: on 'now!' the defender tries to win the ball"],
+    points: ["Stay low, knees bent, on your toes", "Don't dive in; match the dribbler's speed"],
+    d: { label: "20x20", players: [[50,45,1],[50,72,2],[120,60,1],[120,88,2],[165,45,1],[165,72,2]], arrows: [[50,45,90,35],[120,60,150,45]] } },
+  oneVone: { title: "1v1 Duels to Goals", phase: 2, min: 10, t: 14, skills: ["attack", "defend", "dribble"], players: "Pairs, 1 ball per pair", space: "Lanes 10x15 yds",
+    setup: "Make several lanes with a small goal at each end. Attacker v defender with 1 ball.",
+    steps: ["Play 30-45 seconds, then swap roles", "Score = 1 point; defender wins ball = dribble to the other goal", "Winners move up a lane, losers move down"],
+    points: ["Attack with a move and a change of speed", "Defenders: stay low, side-on, be patient"],
+    d: { label: "10x15 lanes", goals: [[40,22,40],[40,100,40],[120,22,40],[120,100,40]], players: [[60,45,1],[60,72,2],[140,45,1],[140,72,2]], arrows: [[60,45,60,30],[140,45,140,30]] } },
+  shooting: { title: "Everybody Shoots", phase: 2, min: 10, t: 12, skills: ["shoot", "touch", "dribble"], players: "Groups of 4, 1 ball each, 1 goal per group", space: "20x15 yds",
+    setup: "Each group has a small goal. Dribble to the shooting line, shoot, collect your ball, repeat – no waiting.",
+    steps: ["Shoot from the cone, then retrieve your own ball", "Count goals in 90 seconds, then try to beat it", "Progression: add a defender recovering from the side"],
+    points: ["Plant foot beside the ball, toes pointing at the target", "Strike through the middle with the laces, head steady"],
+    d: { label: "20x15", goals: [[30,10,50],[120,10,50]], cones: [[55,70],[145,70]], players: [[55,85,1],[80,100,1],[145,85,1],[170,100,1]], arrows: [[55,70,58,24],[145,70,148,24]] } },
+  twoVtwo: { title: "2v2 Small Games", phase: 2, min: 10, t: 12, skills: ["sense", "pass", "shoot"], players: "Groups of 4", space: "20x15 yds per game",
+    setup: "Multiple small fields, each with two small goals. Everyone plays at once.",
+    steps: ["2-minute games, rotate opponents", "Ball out = kick-in or dribble-in", "U10 rule: must make 1 pass before scoring"],
+    points: ["Pass and move to create space", "Shoot early when open"],
+    d: { label: "20x15", goalsV: true, goals: [[20,50,24],[180,50,24]], players: [[70,50,1],[75,85,1],[120,55,2],[115,85,2]], arrows: [[70,50,95,45,1]] } },
+  threeVthree: { title: "3v3 Small-Sided Games", phase: 2, min: 12, t: 10, skills: ["sense", "pass", "defend"], players: "Groups of 6", space: "30x20 yds per game",
+    setup: "Two or three small fields side by side with small goals. No goalkeepers.",
+    steps: ["3-4 minute games, then rotate teams", "Coach adds one condition, e.g. a goal only counts after a dribble past a cone", "Keep rotating so everyone plays"],
+    points: ["Create triangles for passing options", "Stay close to the ball when defending"],
+    d: { label: "30x20", goalsV: true, goals: [[20,50,30],[180,50,30]], players: [[60,35,1],[70,65,1],[85,95,1],[125,40,2],[135,70,2],[120,95,2]], arrows: [[60,35,85,45,1]] } },
+  fourVfour: { title: "4v4 Game (No Keepers)", phase: 3, min: 12, t: 9, skills: ["sense", "shoot", "pass"], players: "Groups of 8", space: "35x25 yds",
+    setup: "Small goals on end lines. Coach stays quiet and lets players play.",
+    steps: ["Play 5-6 minute games", "Kick-ins when the ball leaves the field", "Coach freezes play only for one quick coaching point"],
+    points: ["Use today's skill in the game", "Celebrate effort and creativity"],
+    d: { label: "35x25", goalsV: true, goals: [[20,50,30],[180,50,30]], players: [[55,35,1],[60,65,1],[75,95,1],[95,50,1],[120,35,2],[130,70,2],[145,95,2],[105,70,2]], arrows: [[95,50,120,55,1]] } },
+  scrimmage: { title: "Scrimmage 5v5 / 7v7", phase: 3, min: 15, t: 8, skills: ["sense", "shoot", "defend"], players: "Teams of 5-7", space: "45x30 yds",
+    setup: "Full small-sided game with goals. Let the kids play and make decisions.",
+    steps: ["Substitute often so nobody sits more than 3 minutes", "Throw-ins or kick-ins as per league rules", "Coach looks for the day's theme and praises it"],
+    points: ["Spread out and use the whole field", "Positions are fluid; everyone attacks and defends"],
+    d: { label: "45x30", goalsV: true, goals: [[20,50,35],[180,50,35]], players: [[50,35,1],[55,65,1],[70,95,1],[90,45,1],[100,80,1],[125,35,2],[135,65,2],[145,95,2],[115,60,2],[160,50,2]], arrows: [[90,45,115,50,1]] } },
+  cooldown: { title: "Cool-Down & Wrap-Up", phase: 4, min: 3, t: 2, skills: [], players: "Everyone", space: "Circle",
+    setup: "Gather in a circle with a ball each. Gentle dribbling or juggling, then stretch.",
+    steps: ["Light stretching: hamstrings, quads, calves", "Ask: 'What did you learn? What was your favorite part?'", "Share a highlight about each player; remind them what's next"],
+    points: ["End on a positive note", "Homework: 5 minutes of touches at home"],
+    d: { label: "Circle", players: [[100,30,1],[135,45,1],[150,75,1],[135,100,1],[100,110,1],[65,100,1],[50,75,1],[65,45,1],[100,70,3]] } },
+};
+
+const SAMPLE = [["freeDribble", 8], ["gates", 10], ["passPairs", 10], ["oneVone", 10], ["shooting", 10], ["threeVthree", 12], ["scrimmage", 12], ["cooldown", 3]];
+const STORE = "soccer-plan-v1";
+const NS = "http://www.w3.org/2000/svg";
+const $ = id => document.getElementById(id);
+
+const state = { plan: [], filter: new Set(), search: "", phase: "" };
+let uid = 0, svgCount = 0, toastTimer;
+
+// ---------- helpers ----------
+function h(tag, props = {}, ...kids) {
+  const e = document.createElement(tag);
+  Object.assign(e, props);
+  kids.flat().forEach(k => k != null && e.append(k));
+  return e;
+}
+function se(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+const primaryColor = a => (a.skills[0] ? SKILLS[a.skills[0]].color : NO_SKILL);
+const total = () => state.plan.reduce((s, p) => s + p.min, 0);
+
+function pills(a, tiny) {
+  return h("div", { className: "pills" }, a.skills.map((s, i) => {
+    const p = h("span", { className: "pill" + (i ? " sec" : ""), textContent: SKILLS[s].label });
+    p.style.setProperty("--c", SKILLS[s].color);
+    p.title = i ? "Secondary focus" : "Primary focus";
+    return p;
+  }));
+}
+
+function diagram(a) {
+  const d = a.d, mid = "ah" + svgCount++;
+  const svg = se("svg", { viewBox: "0 0 200 130", class: "diagram", role: "img", "aria-label": `Diagram: ${a.title}, ${d.label}` });
+  const m = se("marker", { id: mid, viewBox: "0 0 10 10", refX: 8, refY: 5, markerWidth: 5, markerHeight: 5, orient: "auto-start-reverse" }, se("defs", {}, svg));
+  se("path", { d: "M0,0 L10,5 L0,10 z", fill: "#347d67" }, m);
+  if (d.label === "Circle") se("circle", { cx: 100, cy: 70, r: 50, fill: "none", stroke: "#8bb5a2", "stroke-width": 1, "stroke-dasharray": "4 3" }, svg);
+  else {
+    se("rect", { x: 10, y: 10, width: 180, height: 110, rx: 2, fill: "none", stroke: "#8bb5a2", "stroke-width": 1 }, svg);
+    se("line", { x1: 100, y1: 10, x2: 100, y2: 120, stroke: "#c8dcd0", "stroke-width": 0.7 }, svg);
+    se("circle", { cx: 100, cy: 65, r: 17, fill: "none", stroke: "#c8dcd0", "stroke-width": 0.7 }, svg);
+  }
+  (d.gates || []).forEach(([x, y]) => [-6, 6].forEach(o => se("circle", { cx: x + o, cy: y, r: 2.5, fill: "#ff9800" }, svg)));
+  (d.cones || []).forEach(([x, y]) => se("circle", { cx: x, cy: y, r: 2.8, fill: "#ff9800" }, svg));
+  (d.goals || []).forEach(g => d.goalsV
+    ? se("rect", { x: g[0] - 3, y: 65 - g[2] / 2, width: 6, height: g[2], fill: "#347d67" }, svg)
+    : se("rect", { x: g[0], y: g[1] - 3, width: g[2], height: 6, fill: "#347d67" }, svg));
+  (d.arrows || []).forEach(([x1, y1, x2, y2, dashed]) =>
+    se("line", { x1, y1, x2, y2, stroke: "#347d67", "stroke-width": 1.5, "marker-end": `url(#${mid})`, ...(dashed ? { "stroke-dasharray": "4 3" } : {}) }, svg));
+  const colors = { 1: "#276b56", 2: "#cc754d", 3: "#263d34" };
+  (d.players || []).forEach(([x, y, t]) => se("circle", { cx: x, cy: y, r: 5, fill: colors[t] || colors[1], stroke: "#fff", "stroke-width": 1.5 }, svg));
+  se("text", { x: 100, y: 128, "text-anchor": "middle", fill: "#416956", "font-size": 7, "font-family": "system-ui" }, svg).textContent = d.label;
+  return svg;
+}
+
+// ---------- plan operations ----------
+function addActivity(id, min) {
+  state.plan.push({ uid: ++uid, id, min: min ?? LIB[id].min });
+  changed();
+}
+function findIdx(u) { return state.plan.findIndex(p => p.uid === u); }
+function removeItem(u) { state.plan.splice(findIdx(u), 1); changed(); }
+function moveItem(u, dir) {
+  const i = findIdx(u), j = i + dir;
+  if (j < 0 || j >= state.plan.length) return;
+  [state.plan[i], state.plan[j]] = [state.plan[j], state.plan[i]];
+  changed();
+}
+function adjust(u, delta) {
+  const p = state.plan[findIdx(u)];
+  p.min = Math.min(60, Math.max(1, p.min + delta));
+  changed();
+}
+
+function encode() { return state.plan.map(p => `${p.id}.${p.min}`).join(","); }
+function decode(str) {
+  return (str || "").split(",").map(x => x.split(".")).filter(([id, m]) => LIB[id] && +m > 0)
+    .map(([id, m]) => ({ uid: ++uid, id, min: Math.min(60, +m) }));
+}
+function persist() {
+  const s = encode();
+  try { localStorage.setItem(STORE, s); } catch (e) {}
+  try { history.replaceState(null, "", s ? "#plan=" + s : location.pathname + location.search); } catch (e) {}
+}
+function changed() { persist(); renderPlan(); updateBadges(); }
+
+function toast(msg) {
+  $("toast").textContent = msg;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => ($("toast").textContent = ""), 2500);
+}
+
+// ---------- rendering: library ----------
+function renderFilters() {
+  const box = $("filters"); box.replaceChildren();
+  Object.entries(SKILLS).forEach(([id, s]) => {
+    const b = h("button", { type: "button", className: "chip", textContent: s.label });
+    b.style.setProperty("--c", s.color);
+    b.setAttribute("aria-pressed", state.filter.has(id));
+    b.addEventListener("click", () => { state.filter.has(id) ? state.filter.delete(id) : state.filter.add(id); renderFilters(); renderLibrary(); });
+    box.append(b);
+  });
+  if (state.filter.size) {
+    const c = h("button", { type: "button", className: "chip clear", textContent: "Clear filter" });
+    c.addEventListener("click", () => { state.filter.clear(); renderFilters(); renderLibrary(); });
+    box.append(c);
+  }
+}
+
+function renderLibrary() {
+  const grid = $("library"); grid.replaceChildren();
+  const f = [...state.filter];
+  const list = Object.entries(LIB)
+    .filter(([, a]) => f.every(s => a.skills.includes(s)))
+    .filter(([, a]) => state.phase === "" || a.phase === Number(state.phase))
+    .filter(([, a]) => [a.title, a.setup, ...a.skills.map(s => SKILLS[s].label)].join(" ").toLowerCase().includes(state.search))
+    .sort((x, y) => x[1].phase - y[1].phase);
+  $("libraryCount").textContent = Object.keys(LIB).length;
+  $("resultNote").textContent = `${list.length} ${list.length === 1 ? "activity" : "activities"}${state.filter.size || state.search || state.phase !== "" ? " matching your filters" : " to get them moving"}`;
+  if (!list.length) {
+    const reset = h("button", { type: "button", className: "btn", textContent: "Reset filters" });
+    reset.addEventListener("click", () => {
+      state.filter.clear(); state.search = ""; state.phase = "";
+      $("search").value = ""; $("phase").value = "";
+      renderFilters(); renderLibrary();
+    });
+    grid.append(h("div", { className: "none" }, h("h3", { textContent: "A little too specific?" }), h("p", { textContent: "Try another search or remove a skill to find more activities." }), reset));
+  }
+  list.forEach(([id, a]) => {
+    const badge = h("span", { className: "in-plan" });
+    badge.dataset.badge = id;
+    const add = h("button", { type: "button", className: "add" }, h("span", { textContent: "+ Add to plan" }), badge);
+    add.setAttribute("aria-label", `Add ${a.title} to practice`);
+    add.addEventListener("click", () => addActivity(id));
+    const card = h("article", { className: "lib-card" },
+      h("div", { className: "diagram-wrap" }, h("span", { className: "phase", textContent: PHASES[a.phase] }), diagram(a), h("span", { className: "dur", textContent: a.min + " min" })),
+      h("div", { className: "lib-body" },
+        h("h3", { textContent: a.title }),
+        h("p", { className: "card-description", textContent: a.setup }),
+        pills(a),
+        h("div", { className: "meta" }, h("span", { textContent: a.players }), h("span", { textContent: a.space })),
+        h("details", {}, h("summary", { textContent: "How to run it" }),
+          h("p", { className: "activity-setup", textContent: a.setup }),
+          h("p", { className: "help-text", textContent: "Green / terracotta: players · Dark: coach · Orange: cones · Dashed arrow: pass" }),
+          h("h4", { textContent: "Steps" }), h("ul", {}, a.steps.map(s => h("li", { textContent: s }))),
+          h("h4", { textContent: "Coaching points" }), h("ul", {}, a.points.map(s => h("li", { textContent: s })))),
+        add));
+    card.style.setProperty("--c", primaryColor(a));
+    grid.append(card);
+  });
+  updateBadges();
+}
+
+function updateBadges() {
+  document.querySelectorAll("[data-badge]").forEach(el => {
+    const n = state.plan.filter(p => p.id === el.dataset.badge).length;
+    el.textContent = n ? `Added · ${n}` : "↗";
+    el.closest(".lib-card").classList.toggle("is-added", n > 0);
+  });
+}
+
+// ---------- rendering: plan ----------
+function coverage() {
+  const m = Object.fromEntries(Object.keys(SKILLS).map(k => [k, 0]));
+  state.plan.forEach(p => LIB[p.id].skills.forEach((s, i) => (m[s] += p.min * (i ? 0.5 : 1))));
+  return m;
+}
+
+function renderPlan() {
+  const t = total(), n = state.plan.length;
+
+  $("totalMin").textContent = t;
+  $("planCount").textContent = `${n} ${n === 1 ? "activity" : "activities"}`;
+  const status = $("status"), fill = $("fill");
+  let cls, msg;
+  if (!n) { cls = "warn"; msg = `Target ${TARGET.min}–${TARGET.max} min`; }
+  else if (t < TARGET.min) { cls = "warn"; msg = `${TARGET.min - t} min to reach ${TARGET.min}`; }
+  else if (t <= TARGET.max) { cls = "ok"; msg = `✓ In the ${TARGET.min}–${TARGET.max} min range`; }
+  else { cls = "bad"; msg = `${t - TARGET.max} min over ${TARGET.max}`; }
+  status.className = "status " + cls; status.textContent = msg;
+  fill.className = "fill " + (cls === "warn" ? "" : cls);
+  const scale = Math.max(100, t);
+  fill.style.width = (t / scale) * 100 + "%";
+  $("zone").style.left = (TARGET.min / scale) * 100 + "%";
+  $("zone").style.width = ((TARGET.max - TARGET.min) / scale) * 100 + "%";
+  const gl = $("gaugeLabels"); gl.replaceChildren();
+  [0, TARGET.min, TARGET.max].forEach(v => { const s = h("span", { textContent: v }); s.style.left = (v / scale) * 100 + "%"; gl.append(s); });
+
+  const tl = $("timeline"); tl.replaceChildren();
+  if (!n) tl.append(h("div", { className: "timeline-empty", textContent: "Your session, at a glance" }));
+  state.plan.forEach((p, i) => {
+    const a = LIB[p.id];
+    const seg = h("button", { type: "button", className: "seg", title: `${a.title} (${p.min} min)` }, h("b", { textContent: p.min + "'" }));
+    seg.setAttribute("aria-label", `${i + 1}. ${a.title}, ${p.min} minutes`);
+    seg.addEventListener("click", () => document.getElementById(`item-${p.uid}`).scrollIntoView({ block: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" }));
+    seg.style.flexGrow = p.min; seg.style.background = primaryColor(a);
+    tl.append(seg);
+  });
+
+  // skills focus
+  const cov = coverage();
+  const ranked = Object.entries(cov).sort((a, b) => b[1] - a[1]);
+  const coreIds = n ? ranked.filter(([, v]) => v > 0).slice(0, 3).map(([k]) => k) : [];
+  $("core").innerHTML = "";
+  if (coreIds.length) {
+    $("core").append(h("span", { className: "core-label", textContent: "CORE FOCUS" }));
+    coreIds.forEach(k => {
+      const s = h("b", { textContent: SKILLS[k].label }); s.style.setProperty("--c", SKILLS[k].color);
+      $("core").append(s);
+    });
+  } else {
+    $("core").append(h("span", { className: "help-text", textContent: "Your skill focus will take shape as you add activities." }));
+  }
+  const box = $("skills"); box.replaceChildren();
+  ranked.forEach(([k, v]) => {
+    const row = h("div", { className: "skill-row" + (v ? "" : " zero"), title: "Primary skill counts full time, secondary skills count half" },
+      h("div", { className: "name" }, h("span", { textContent: SKILLS[k].label }), coreIds.includes(k) ? h("span", { className: "star", textContent: "★", title: "Core focus" }) : null),
+      h("div", { className: "bar" }, h("i", { style: `width:${t ? Math.min(100, (v / t) * 100) : 0}%` })),
+      h("div", { className: "val", textContent: v ? Math.round(v) + " min" : "—" }));
+    row.style.setProperty("--c", SKILLS[k].color);
+    box.append(row);
+  });
+
+  // plan items
+  const ol = $("items"); ol.replaceChildren();
+  if (!n) ol.append(h("li", { className: "empty" }, h("span", { className: "empty-symbol", textContent: "+", ariaHidden: "true" }), h("strong", { textContent: "A great practice starts here." }), h("p", { textContent: "Add an activity from the library, or try our ready-to-go sample." })));
+  let clock = 0, since = 0;
+  state.plan.forEach((p, i) => {
+    const a = LIB[p.id];
+    const btn = (txt, label, fn, dis) => { const b = h("button", { type: "button", className: "icon", textContent: txt, disabled: !!dis }); b.setAttribute("aria-label", label + " " + a.title); b.addEventListener("click", fn); return b; };
+    const li = h("li", { className: "item", id: `item-${p.uid}` },
+      h("div", { className: "item-top" },
+        h("div", {}, h("b", { textContent: `${i + 1}. ${a.title}` }), h("small", { textContent: `${clock}–${clock + p.min} min · ${PHASES[a.phase]}` })),
+        btn("✕", "Remove", () => removeItem(p.uid))),
+      pills(a),
+      h("div", { className: "item-ctl" },
+        h("div", { className: "stepper" }, btn("−", "Shorten", () => adjust(p.uid, -1)), h("span", { className: "mins", textContent: p.min + " min" }), btn("+", "Lengthen", () => adjust(p.uid, 1))),
+        h("div", {}, btn("▲", "Move up", () => moveItem(p.uid, -1), i === 0), " ", btn("▼", "Move down", () => moveItem(p.uid, 1), i === n - 1))));
+    li.style.setProperty("--c", primaryColor(a));
+    ol.append(li);
+    clock += p.min; since += p.min;
+    if (since >= 15 && i < n - 1) { ol.append(h("li", { className: "water", textContent: "PAUSE FOR WATER" })); since = 0; }
+  });
+
+  const touches = Math.round(state.plan.reduce((s, p) => s + LIB[p.id].t * p.min, 0) / 10) * 10;
+  $("touches").textContent = n ? `~${touches.toLocaleString()} touches per player · Rough estimate` : "";
+  $("mobileBar").replaceChildren(h("span", {}, h("strong", { textContent: `${t} min` }), ` / ${n} activities`), h("span", { textContent: "Your practice ↗" }));
+  renderPrintSheet();
+}
+
+function renderPrintSheet() {
+  const box = $("printSheet"); box.replaceChildren();
+  let clock = 0;
+  state.plan.forEach((p, i) => {
+    const a = LIB[p.id];
+    const d = h("div", { className: "ps-item" },
+      h("div", {},
+        h("h4", { textContent: `${i + 1}. ${a.title} (${clock}–${clock + p.min} min)` }),
+        h("div", { textContent: `${a.players} · ${a.space}` }),
+        h("div", { textContent: a.setup }),
+        h("ul", {}, a.steps.map(s => h("li", { textContent: s }))),
+        h("div", { textContent: "Coaching points: " + a.points.join("; ") })),
+      diagram(a));
+    d.style.setProperty("--c", primaryColor(a));
+    box.append(d);
+    clock += p.min;
+  });
+}
+
+// ---------- init ----------
+PHASES.forEach((label, i) => $("phase").append(h("option", { value: String(i), textContent: label })));
+$("search").addEventListener("input", e => { state.search = e.target.value.trim().toLowerCase(); renderLibrary(); });
+$("phase").addEventListener("change", e => { state.phase = e.target.value; renderLibrary(); });
+$("sample").addEventListener("click", () => { state.plan = SAMPLE.map(([id, m]) => ({ uid: ++uid, id, min: m })); changed(); });
+$("clear").addEventListener("click", () => { state.plan = []; changed(); });
+$("print").addEventListener("click", () => window.print());
+$("share").addEventListener("click", async () => {
+  persist();
+  try { await navigator.clipboard.writeText(location.href); toast("Link copied!"); }
+  catch (e) { toast("Copy the address bar link to share"); }
+});
+
+(function init() {
+  const m = location.hash.match(/^#plan=(.*)$/);
+  let saved = m ? decode(decodeURIComponent(m[1])) : [];
+  if (!saved.length && !m) { try { saved = decode(localStorage.getItem(STORE)); } catch (e) {} }
+  state.plan = saved;
+  renderFilters(); renderLibrary(); renderPlan();
+})();
+</script>
+</body>
+</html>
